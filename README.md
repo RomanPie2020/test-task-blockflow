@@ -30,15 +30,27 @@ Full-stack demo with 3-step React flow and job processing via WebSocket or HTTP 
 ### High-level flow
 ```mermaid
 flowchart LR
-  UI[React UI] -->|POST /jobs| API[Express API]
-  API --> DB[(SQLite jobs)]
-  API --> JOB[Job service]
-  JOB --> PIPE[Pipeline steps]
+  UI[React Frontend]
+  API[Express API]
+  DB[(SQLite)]
+  JOB[Job Service]
+  PIPE[Pipeline Steps]
+  WS[WebSocket Hub]
+
+  UI --> API
+  API --> DB
+  API --> JOB
+  JOB --> PIPE
   PIPE --> DB
-  JOB --> WS[WebSocket hub]
+  JOB --> WS
   WS --> UI
-  UI -->|GET /jobs/:id polling| API
+  UI --> API
 ```
+
+Flow legend:
+- UI -> API (create job): `POST /jobs`
+- UI -> API (poll status): `GET /jobs/:id`
+- UI <-> WS (live updates): `ws://.../ws?jobId=:id`
 
 ## Part 1 - Frontend
 
