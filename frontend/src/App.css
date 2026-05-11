@@ -1,0 +1,349 @@
+.page {
+  min-height: 100vh;
+  background: #ececf1;
+  padding: 18px 24px 24px;
+}
+
+.topBar {
+  max-width: 760px;
+  margin: 0 auto 28px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.backButton {
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
+  border: none;
+  background: #fff;
+  color: #444;
+  font-size: 28px;
+  line-height: 1;
+  padding: 0;
+}
+
+.lineTrack {
+  flex: 1;
+  height: 6px;
+  border-radius: 6px;
+  background: #dfe0e6;
+  overflow: hidden;
+}
+
+.lineFill {
+  height: 100%;
+  width: 0;
+  background: #25c7af;
+  border-radius: 6px;
+  transition: width 200ms ease;
+}
+
+.card {
+  width: 100%;
+  max-width: 760px;
+  border-radius: 18px;
+  margin: 0 auto;
+  padding: 24px 28px 28px;
+  background: transparent;
+  text-align: center;
+}
+
+.subtitle {
+  margin-top: 4px;
+  color: #666;
+}
+
+h1 {
+  margin: 20px 0 8px;
+  color: #1f2933;
+  font-size: 48px;
+}
+
+.goalAccent {
+  color: #2ec7ad;
+}
+
+h2 {
+  margin: 0;
+  color: #4b5563;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.options {
+  display: grid;
+  gap: 10px;
+  margin: 22px auto 18px;
+  max-width: 420px;
+}
+
+.option {
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: #fff;
+  color: #222;
+  text-align: left;
+  font-size: 28px;
+  padding: 18px 16px;
+}
+
+.option.active {
+  border-color: #25c7af;
+  background: #f0fdfa;
+}
+
+button {
+  padding: 12px 28px;
+  border-radius: 24px;
+  border: 1px solid #25c7af;
+  background: linear-gradient(90deg, #3ba9f7 0%, #25c7af 100%);
+  color: #fff;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.secondary {
+  border-color: #777;
+  background: #fff;
+  color: #222;
+}
+
+.weightInput {
+  width: 300px;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid #d1d5db;
+  margin: 18px 0 8px;
+  font-size: 40px;
+  text-align: center;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.weightSection {
+  margin-top: 50px;
+}
+
+.unitSwitch {
+  width: 124px;
+  margin: 0 auto;
+  padding: 3px;
+  border-radius: 24px;
+  border: 2px solid #f5f7fb;
+  background: #ffffff;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.unitOption {
+  border: none;
+  border-radius: 18px;
+  background: transparent;
+  color: #222;
+  font-size: 28px;
+  padding: 6px 0;
+}
+
+.unitOption.active {
+  background: #2bc7ad;
+  color: #fff;
+}
+
+.weightInput.invalid {
+  border-color: #e64545;
+}
+
+.rangeHint {
+  width: 300px;
+  margin: 0 auto;
+  border-top: 1px solid #676a70;
+  padding-top: 6px;
+  color: #6d7178;
+  font-size: 14px;
+}
+
+.rangeHint.error {
+  min-width: 350px;
+  color: #ff3f2f;
+  border-top-color: #ff3f2f;
+  margin: 0 auto;
+}
+
+.goalCard {
+  max-width: 620px;
+  margin: 20px auto 80px;
+  background: #f6f6f7;
+  color: #222;
+  border: 1px solid #d3d5d8;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.goalTitle {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+
+.goalText {
+  margin: 0;
+  color: #5f6369;
+  font-size: 22px;
+  line-height: 1.4;
+}
+
+.continueButton {
+  margin-top: 40px;
+  min-width: 132px;
+}
+
+.validation,
+.error {
+  color: #c92a2a;
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+.actions {
+  display: grid;
+  gap: 10px;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.runSection {
+  margin-top: 50px;
+}
+
+.progressBlock {
+  margin-top: 22px;
+  border: 1px solid #e9eaef;
+  border-radius: 18px;
+  padding: 22px;
+  background: #fff;
+}
+
+progress {
+  width: 100%;
+}
+
+.progressTitle {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 14px 0 6px;
+}
+
+.progressHint {
+  color: #4b5563;
+}
+
+.progressDark {
+  margin-top: 34px;
+  border: 1px solid #e9eaef;
+  background: #fff;
+  color: #1f2933;
+}
+
+.circleProgress {
+  --progress: 0%;
+  width: 140px;
+  height: 140px;
+  margin: 0 auto;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: conic-gradient(#25c7af var(--progress), #e5e7eb 0);
+}
+
+.circleProgress span {
+  width: 116px;
+  height: 116px;
+  border-radius: 50%;
+  background: #fff;
+  display: grid;
+  place-items: center;
+  color: #18a694;
+  font-size: 38px;
+  font-weight: 700;
+}
+
+.progressDark .circleProgress span {
+  background: #fff;
+}
+
+.reviewCard {
+  margin: 150px auto 0;
+  max-width: 620px;
+  border-radius: 12px;
+  background: #eaf3e4;
+  color: #232323;
+  text-align: left;
+  padding: 14px 16px;
+}
+
+.reviewTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.indeterminate {
+  height: 10px;
+  border-radius: 100px;
+  background: linear-gradient(
+    90deg,
+    rgba(24, 100, 171, 0.15) 0%,
+    rgba(24, 100, 171, 0.9) 50%,
+    rgba(24, 100, 171, 0.15) 100%
+  );
+  background-size: 200% 100%;
+  animation: loading 1s linear infinite;
+}
+
+@media (max-width: 860px) {
+  .card {
+    padding: 16px;
+  }
+
+  h1 {
+    font-size: 36px;
+  }
+
+  .option {
+    font-size: 22px;
+  }
+
+  .weightInput,
+  .rangeHint {
+    width: 100%;
+    max-width: 320px;
+  }
+
+  .goalTitle {
+    font-size: 18px;
+  }
+
+  .goalText {
+    font-size: 14px;
+  }
+}
+
+@keyframes loading {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
