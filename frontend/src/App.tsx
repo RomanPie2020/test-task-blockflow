@@ -1,312 +1,87 @@
-import type { CSSProperties } from "react"
-import { useEffect, useMemo, useRef, useState } from "react"
-import "./App.css"
+import { useMemo, useState } from "react";
+import { ProgressHeader } from "./components/ProgressHeader";
+import { RunStep } from "./components/RunStep";
+import { WeightStep } from "./components/WeightStep";
+import { WishStep } from "./components/WishStep";
+import { wishOptions } from "./constants/onboarding";
+import { useJobRunner } from "./hooks/useJobRunner";
+import type { Step, WeightUnit } from "./types/onboarding";
+import { isValidWeight } from "./utils/weight";
+import "./App.css";
 
-type JobStatus = "queued" | "processing" | "done" | "failed";
-type RunMode = "ws" | "http";
-type WeightUnit = "lbs" | "kg";
-
-interface JobResponse {
-  id: string;
-  status: JobStatus;
-  progress: number;
-  result: string | null;
-  error: string | null;
-  createdAt: string;
-}
-
-const options = ["😊 wish1", "🥳 wish2", "⚖️ wish3", "💚 wish4", "☺️ wish5"];
-const apiBase = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000";
+const stepTitles: Record<Step, string> = {
+  1: "What is your main wish?",
+  2: "What is your goal weight?",
+  3: "Create something good for you...",
+};
 
 function App() {
-  const [step, setStep] = useState(1);
-  const [selectedOption, setSelectedOption] = useState<string>("");
-  const [numericValue, setNumericValue] = useState<string>("");
-  const [job, setJob] = useState<JobResponse | null>(null);
-  const [runningMode, setRunningMode] = useState<RunMode | null>(null);
-  const [httpLoading, setHttpLoading] = useState(false);
-  const [error, setError] = useState<string>("");
+  const [step, setStep] = useState<Step>(1);
+  const [selectedOption, setSelectedOption] = useState("");
+  const [weightValue, setWeightValue] = useState("");
   const [unit, setUnit] = useState<WeightUnit>("kg");
-  const wsRef = useRef<WebSocket | null>(null);
-  const pollingRef = useRef<number | null>(null);
 
-  const numeric = Number(numericValue);
-  const min = unit === "kg" ? 10 : 22;
-  const max = unit === "kg" ? 200 : 485;
-  const isNumberValid = useMemo(() => numeric >= min && numeric <= max, [numeric, min, max]);
-  const topProgress = (step / 3) * 100;
-  const wsProgressValue = job?.progress ?? 0;
+  const { error, isHttpLoading, job, resetRunner, runningMode, startHttpRun, startWebSocketRun } = useJobRunner();
 
-  const stopActiveJobWatchers = () => {
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
-    }
-    if (pollingRef.current) {
-      window.clearInterval(pollingRef.current);
-      pollingRef.current = null;
-    }
+  const numericWeight = Number(weightValue);
+  const isWeightValid = useMemo(() => isValidWeight(numericWeight, unit), [numericWeight, unit]);
+
+  const goBack = () => {
+    setStep((currentStep) => (currentStep === 1 ? 1 : ((currentStep - 1) as Step)));
   };
 
-  useEffect(() => stopActiveJobWatchers, []);
-
-  const resetAll = () => {
-    stopActiveJobWatchers();
+  const resetFlow = () => {
+    resetRunner();
     setStep(1);
     setSelectedOption("");
-    setNumericValue("");
-    setRunningMode(null);
-    setJob(null);
-    setHttpLoading(false);
-    setError("");
+    setWeightValue("");
     setUnit("kg");
   };
 
-  const createJob = async (): Promise<JobResponse> => {
-    const response = await fetch(`${apiBase}/jobs`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        selectedOption,
-        numberValue: Number(numericValue),
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to create job");
-    }
-
-    return (await response.json()) as JobResponse;
-  };
-
-  const startWithWebSocket = async () => {
-    try {
-      stopActiveJobWatchers();
-      setError("");
-      setJob(null);
-      setHttpLoading(false);
-      setRunningMode("ws");
-      const created = await createJob();
-      setJob(created);
-
-      const wsUrl = apiBase.replace("http://", "ws://").replace("https://", "wss://");
-      const ws = new WebSocket(`${wsUrl}/ws?jobId=${created.id}`);
-      wsRef.current = ws;
-
-      ws.onmessage = (event) => {
-        const update = JSON.parse(event.data) as Partial<JobResponse>;
-        setJob((previous) => (previous ? { ...previous, ...update } : { ...created, ...update }));
-        if (update.status === "done" || update.status === "failed") {
-          ws.close();
-          wsRef.current = null;
-        }
-      };
-
-      ws.onerror = () => {
-        setError("WebSocket error");
-      };
-
-      ws.onclose = () => {
-        if (wsRef.current === ws) {
-          wsRef.current = null;
-        }
-      };
-    } catch (currentError) {
-      setRunningMode(null);
-      setError(currentError instanceof Error ? currentError.message : "Failed to start WebSocket job");
-    }
-  };
-
-  const startWithHttp = async () => {
-    try {
-      stopActiveJobWatchers();
-      setError("");
-      setJob(null);
-      setRunningMode("http");
-      setHttpLoading(true);
-      const created = await createJob();
-      setJob(created);
-
-      const pollJob = async () => {
-        const response = await fetch(`${apiBase}/jobs/${created.id}`);
-        if (!response.ok) {
-          throw new Error("Failed to fetch job status");
-        }
-
-        const nextState = (await response.json()) as JobResponse;
-        setJob(nextState);
-        if (nextState.status === "done" || nextState.status === "failed") {
-          stopActiveJobWatchers();
-          setHttpLoading(false);
-        }
-      };
-
-      pollingRef.current = window.setInterval(() => {
-        void pollJob().catch((currentError) => {
-          stopActiveJobWatchers();
-          setHttpLoading(false);
-          setError(currentError instanceof Error ? currentError.message : "Polling failed");
-        });
-      }, 1200);
-    } catch (currentError) {
-      stopActiveJobWatchers();
-      setRunningMode(null);
-      setHttpLoading(false);
-      setError(currentError instanceof Error ? currentError.message : "Failed to start HTTP job");
-    }
-  };
+  const getJobPayload = () => ({
+    selectedOption,
+    numberValue: numericWeight,
+  });
 
   return (
     <main className="page">
-      {(step === 1 || step === 2) && (
-        <div className="topBar">
-          <button
-            type="button"
-            className="backButton"
-            onClick={() => setStep((current) => Math.max(1, current - 1))}
-            disabled={step === 1 || runningMode !== null}
-          >
-            ‹
-          </button>
-          <div className="lineTrack">
-            <div className="lineFill" style={{ width: `${topProgress}%` }} />
-          </div>
-        </div>
+      {step < 3 && (
+        <ProgressHeader currentStep={step} isBackDisabled={step === 1 || runningMode !== null} onBack={goBack} />
       )}
 
       <div className="card">
-        <h1>
-          {step === 1 ? (
-            "What is your main wish?"
-          ) : step === 2 ? (
-            "What is your goal weight?"
-          ) : (
-            "Create something good for you..."
-          )}
-
-        </h1>
+        <h1>{stepTitles[step]}</h1>
 
         {step === 1 && (
-          <section>
-            <div className="options">
-              {options.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  className={`option ${selectedOption === option ? "active" : ""}`}
-                  onClick={() => setSelectedOption(option)}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-            <button type="button" disabled={!selectedOption} onClick={() => setStep(2)}>
-              Continue
-            </button>
-          </section>
+          <WishStep
+            options={wishOptions}
+            selectedOption={selectedOption}
+            onContinue={() => setStep(2)}
+            onSelect={setSelectedOption}
+          />
         )}
 
         {step === 2 && (
-          <section className="weightSection">
-            <div className="unitSwitch">
-              <button
-                type="button"
-                className={`unitOption ${unit === "lbs" ? "active" : ""}`}
-                onClick={() => setUnit("lbs")}
-              >
-                lbs
-              </button>
-              <button
-                type="button"
-                className={`unitOption ${unit === "kg" ? "active" : ""}`}
-                onClick={() => setUnit("kg")}
-              >
-                kg
-              </button>
-            </div>
-
-            <input
-              className={`weightInput ${!isNumberValid && numericValue ? "invalid" : ""}`}
-              type="number"
-              value={numericValue}
-              onChange={(event) => setNumericValue(event.target.value)}
-              placeholder={unit === "kg" ? "56" : "123"}
-            />
-            <div className={`rangeHint ${!isNumberValid && numericValue ? "error" : ""}`}>
-              {unit === "kg"
-                ? "Please enter a value from 1 kg to 200 kg"
-                : "Please enter a value between 22 lbs and 485 lbs"}
-            </div>
-
-            {isNumberValid && (
-              <div className="goalCard">
-                <p className="goalTitle">⚖ Goal: Lose 5% of your weight</p>
-                <p className="goalText">
-                  Even small, steady changes can make a meaningful difference. We&apos;ll support you with a balanced
-                  plan to help you feel lighter, healthier, and more confident over time.
-                </p>
-              </div>
-            )}
-
-            <button className="continueButton" type="button" disabled={!isNumberValid} onClick={() => setStep(3)}>
-              Continue
-            </button>
-          </section>
+          <WeightStep
+            isValid={isWeightValid}
+            unit={unit}
+            value={weightValue}
+            onContinue={() => setStep(3)}
+            onUnitChange={setUnit}
+            onValueChange={setWeightValue}
+          />
         )}
 
         {step === 3 && (
-          <section className="runSection">
-            <div className="actions">
-              <button type="button" onClick={startWithWebSocket} disabled={runningMode !== null}>
-                Start via WebSocket
-              </button>
-              <button type="button" onClick={startWithHttp} disabled={runningMode !== null}>
-                Start via HTTP
-              </button>
-              <button type="button" className="secondary" onClick={resetAll}>
-                Reset
-              </button>
-            </div>
-
-            {runningMode === "ws" && job && (
-              <div className="progressBlock progressDark">
-                <div
-                  className="circleProgress"
-                  style={
-                    {
-                      "--progress": `${wsProgressValue}%`,
-                    } as CSSProperties
-                  }
-                >
-                  <span>{wsProgressValue}%</span>
-                </div>
-                {job?.status === "done" ? (<p className="progressTitle">It's done!</p>
-                 ) : (<><p className="progressTitle">Creating something good for you...</p>
-                <p className="progressHint">This will only take a moment — your item is almost ready.</p></>)}
-
-                <div className="reviewCard">
-                  <div className="reviewTop">
-                    <span>⭐⭐⭐⭐⭐</span>
-                    <span>John</span>
-                  </div>
-                  <p>&quot;I love this website! It makes practicing so easy and relaxing.&quot;</p>
-                </div>
-              </div>
-            )}
-
-            {runningMode === "http" && (
-              <div className="progressBlock">
-                <p className="progressTitle">
-                  {job?.status === "done" ? "It's done!" : "Processing via HTTP"}
-                </p>
-                {httpLoading ? <div className="indeterminate" /> : <p className="statusText">Finished</p>}
-                {job?.status === "done" && <p className="resultText">Result: {job.result}</p>}
-              </div>
-            )}
-
-            {job?.status === "failed" && <p className="error">Job failed: {job.error}</p>}
-            {error && <p className="error">{error}</p>}
-          </section>
+          <RunStep
+            error={error}
+            isHttpLoading={isHttpLoading}
+            job={job}
+            runningMode={runningMode}
+            onReset={resetFlow}
+            onStartHttp={() => void startHttpRun(getJobPayload())}
+            onStartWebSocket={() => void startWebSocketRun(getJobPayload())}
+          />
         )}
       </div>
     </main>
