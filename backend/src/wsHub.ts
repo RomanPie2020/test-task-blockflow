@@ -1,5 +1,6 @@
 import { WebSocketServer, WebSocket } from "ws";
 import { JobEvent } from "./types.js";
+import { getJobById } from "./db.js";
 
 const jobSubscribers = new Map<string, Set<WebSocket>>();
 
@@ -18,6 +19,11 @@ export function setupWebSocket(server: any) {
     const subscribers = jobSubscribers.get(jobId) ?? new Set<WebSocket>();
     subscribers.add(socket);
     jobSubscribers.set(jobId, subscribers);
+
+    const currentJob = getJobById(jobId);
+    if (currentJob && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify(currentJob));
+    }
 
     socket.on("close", () => {
       subscribers.delete(socket);

@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react"
-import { useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import "./App.css"
 
 type JobStatus = "queued" | "processing" | "done" | "failed";
@@ -37,7 +37,7 @@ function App() {
   const topProgress = (step / 3) * 100;
   const wsProgressValue = job?.progress ?? 0;
 
-  const resetAll = () => {
+  const stopActiveJobWatchers = () => {
     if (wsRef.current) {
       wsRef.current.close();
       wsRef.current = null;
@@ -46,6 +46,12 @@ function App() {
       window.clearInterval(pollingRef.current);
       pollingRef.current = null;
     }
+  };
+
+  useEffect(() => stopActiveJobWatchers, []);
+
+  const resetAll = () => {
+    stopActiveJobWatchers();
     setStep(1);
     setSelectedOption("");
     setNumericValue("");
@@ -74,51 +80,80 @@ function App() {
   };
 
   const startWithWebSocket = async () => {
-    setError("");
-    setRunningMode("ws");
-    const created = await createJob();
-    setJob(created);
+    try {
+      stopActiveJobWatchers();
+      setError("");
+      setJob(null);
+      setHttpLoading(false);
+      setRunningMode("ws");
+      const created = await createJob();
+      setJob(created);
 
-    const wsUrl = apiBase.replace("http://", "ws://").replace("https://", "wss://");
-    const ws = new WebSocket(`${wsUrl}/ws?jobId=${created.id}`);
-    wsRef.current = ws;
+      const wsUrl = apiBase.replace("http://", "ws://").replace("https://", "wss://");
+      const ws = new WebSocket(`${wsUrl}/ws?jobId=${created.id}`);
+      wsRef.current = ws;
 
-    ws.onmessage = (event) => {
-      const update = JSON.parse(event.data) as Partial<JobResponse>;
-      setJob((previous) => (previous ? { ...previous, ...update } : created));
-      if (update.status === "done" || update.status === "failed") {
-        ws.close();
-      }
-    };
+      ws.onmessage = (event) => {
+        const update = JSON.parse(event.data) as Partial<JobResponse>;
+        setJob((previous) => (previous ? { ...previous, ...update } : { ...created, ...update }));
+        if (update.status === "done" || update.status === "failed") {
+          ws.close();
+          wsRef.current = null;
+        }
+      };
 
-    ws.onerror = () => {
-      setError("WebSocket error");
-    };
+      ws.onerror = () => {
+        setError("WebSocket error");
+      };
+
+      ws.onclose = () => {
+        if (wsRef.current === ws) {
+          wsRef.current = null;
+        }
+      };
+    } catch (currentError) {
+      setRunningMode(null);
+      setError(currentError instanceof Error ? currentError.message : "Failed to start WebSocket job");
+    }
   };
 
   const startWithHttp = async () => {
-    setError("");
-    setRunningMode("http");
-    setHttpLoading(true);
-    const created = await createJob();
-    setJob(created);
+    try {
+      stopActiveJobWatchers();
+      setError("");
+      setJob(null);
+      setRunningMode("http");
+      setHttpLoading(true);
+      const created = await createJob();
+      setJob(created);
 
-    pollingRef.current = window.setInterval(async () => {
-      const response = await fetch(`${apiBase}/jobs/${created.id}`);
-      if (!response.ok) {
-        return;
-      }
-
-      const nextState = (await response.json()) as JobResponse;
-      setJob(nextState);
-      if (nextState.status === "done" || nextState.status === "failed") {
-        if (pollingRef.current) {
-          window.clearInterval(pollingRef.current);
-          pollingRef.current = null;
+      const pollJob = async () => {
+        const response = await fetch(`${apiBase}/jobs/${created.id}`);
+        if (!response.ok) {
+          throw new Error("Failed to fetch job status");
         }
-        setHttpLoading(false);
-      }
-    }, 1200);
+
+        const nextState = (await response.json()) as JobResponse;
+        setJob(nextState);
+        if (nextState.status === "done" || nextState.status === "failed") {
+          stopActiveJobWatchers();
+          setHttpLoading(false);
+        }
+      };
+
+      pollingRef.current = window.setInterval(() => {
+        void pollJob().catch((currentError) => {
+          stopActiveJobWatchers();
+          setHttpLoading(false);
+          setError(currentError instanceof Error ? currentError.message : "Polling failed");
+        });
+      }, 1200);
+    } catch (currentError) {
+      stopActiveJobWatchers();
+      setRunningMode(null);
+      setHttpLoading(false);
+      setError(currentError instanceof Error ? currentError.message : "Failed to start HTTP job");
+    }
   };
 
   return (
@@ -261,9 +296,11 @@ function App() {
 
             {runningMode === "http" && (
               <div className="progressBlock">
-                <p className="progressTitle">Processing via HTTP</p>
-                {httpLoading ? <div className="indeterminate" /> : <p>Finished</p>}
-                {job?.status === "done" && <p>Result: {job.result}</p>}
+                <p className="progressTitle">
+                  {job?.status === "done" ? "It's done!" : "Processing via HTTP"}
+                </p>
+                {httpLoading ? <div className="indeterminate" /> : <p className="statusText">Finished</p>}
+                {job?.status === "done" && <p className="resultText">Result: {job.result}</p>}
               </div>
             )}
 
