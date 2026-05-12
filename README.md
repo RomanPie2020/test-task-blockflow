@@ -101,6 +101,6 @@ Optional override: `VITE_API_BASE_URL=<your-backend-url>`.
 
 ## Deployment links
 
-- GitHub repo: `<add-your-github-link>`
-- Frontend (Firebase Hosting): `<add-your-frontend-url>`
-- Backend online URL: `<add-your-backend-url>`
+- GitHub repo: `https://github.com/RomanPie2020/test-task-blockflow`
+- Frontend (Firebase Hosting): `https://blockflowtt-9e11a.web.app`
+- Backend online URL: `https://test-task-blockflow.onrender.com`
